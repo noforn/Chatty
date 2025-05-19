@@ -17,6 +17,7 @@ from typing import Optional
 
 from .fileTools import list_files, read_file_content, write_file_content
 from .memoryTools import get_memory, set_memory
+from .taskTools import create_scheduled_task, list_scheduled_tasks, delete_scheduled_task
 
 now = datetime.datetime.now()
 formatted_date_time = now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
@@ -672,6 +673,9 @@ file_read_declaration_simple = {"name": "read_file_content"}
 file_write_declaration_simple = {"name": "write_file_content"}
 memory_get_declaration_simple = {"name": "get_memory"}
 memory_set_declaration_simple = {"name": "set_memory"}
+schedule_task_declaration_simple = {"name": "create_scheduled_task"}
+list_scheduled_tasks_declaration_simple = {"name": "list_scheduled_tasks"}
+delete_scheduled_task_declaration_simple = {"name": "delete_scheduled_task"}
 
 
 tools_config = [ 
@@ -690,7 +694,10 @@ tools_config = [
             file_read_declaration_simple,
             file_write_declaration_simple,
             memory_get_declaration_simple,
-            memory_set_declaration_simple
+            memory_set_declaration_simple,
+            schedule_task_declaration_simple,
+            list_scheduled_tasks_declaration_simple,
+            delete_scheduled_task_declaration_simple
         ]
     }
 ]
@@ -742,6 +749,31 @@ root_agent = Agent(
             - To delete an event: find its ID with list_calendar_events, then use delete_calendar_event
             - To modify an event: delete with delete_calendar_event, then recreate with create_calendar_event (in EST)
             - No confirmation prompts are required
+        - Scheduled tasks
+            - If the user wants you to remember to do something or remind them about something later, that's a scheduled task. You'll need to understand what they want you to do (the prompt for you later) and exactly when (the schedule).
+            - To set these up, you will use the `create_scheduled_task` tool. You should figure out the `user_prompt` (what you should act on or say later) and the `schedule_vevent` (the iCalendar details for the timing, like DTSTART and RRULE) based on your conversation with the user.
+            - If the user wants to cancel a scheduled action or reminder, first help them identify the correct one by using `list_scheduled_tasks`. Once they confirm which task to delete, you will use `delete_scheduled_task` with its specific `task_id`.
+            - When you are formulating the `schedule_vevent` for `create_scheduled_task`, be mindful of the current date and time ({formatted_date_time}). When creating tasks, ALWAYS assume the Eastern Time Zone and format the `DTSTART` property using `TZID=America/New_York`. 
+            - REMEMBER, scheduled tasks are COMPLETELY seperate from calendar events. If the user asks about their schedule or upcoming events, you should never call any of the task tools. These are preserved for your own tasks, not the users.
+            - After calling the create_scheduled_task tool, respond naturally, letting the user know that you've scheduled the task. Continue the natural flow of the conversation. 
+            - When you are formulating the `schedule_vevent` for `create_scheduled_task`:
+                - You MUST create a valid VEVENT string. A complete VEVENT includes:
+                    - `BEGIN:VEVENT` and `END:VEVENT` on their own lines.
+                    - `UID`: A unique identifier for the event. You should generate this as a random unique string.
+                    - `DTSTAMP`: The Coordinated Universal Time (UTC) when you are creating this event. It MUST be in the format `YYYYMMDDTHHMMSSZ`. For example: `DTSTAMP:20250519T210000Z`.
+                    - `DTSTART`: The start time of the event.
+                        - For any user-specified times, you MUST assume they are in the Eastern Time Zone and format the `DTSTART` property using `TZID=America/New_York` and the `T` separator between date and time. Example: `DTSTART;TZID=America/New_York:20250520T163000`.
+                        - Do NOT use "Z" (Zulu/UTC) for `DTSTART` when dealing with user-provided local times; always use `TZID=America/New_York`.
+                    - `SUMMARY`: A brief description of the task, e.g., `SUMMARY:Turn off the lights`. (This is good practice, though not strictly required by the scheduler right now).
+                    - `RRULE` (Optional): For recurring tasks. For a one-time event, you can either omit `RRULE` entirely or use a specific one-off like `RRULE:FREQ=DAILY;COUNT=1`. Your current example of `RRULE:FREQ=MINUTELY;COUNT=1` is also fine for a one-off if that's how you want to express it.
+                - Be mindful of the current date and time ({formatted_date_time}) when calculating future times for `DTSTART`.
+                - Example of a full, valid VEVENT for a one-off task for May 20th, 2025 at 4:30 PM Eastern, created at 9:00 PM UTC on May 19th:
+                  `BEGIN:VEVENT`
+                  `UID:agent-task-a1b2c3d4e5`
+                  `DTSTAMP:20250519T210000Z`
+                  `DTSTART;TZID=America/New_York:20250520T163000`
+                  `SUMMARY:Follow up on email`
+                  `END:VEVENT`
         - Lights
             - Only act when the user explicitly mentions “lights”
             - Brightness changes: get current state via get_light_state, then use set_light_brightness
@@ -782,6 +814,9 @@ root_agent = Agent(
         read_file_content,
         write_file_content,
         get_memory,
-        set_memory
+        set_memory,
+        create_scheduled_task,
+        list_scheduled_tasks,
+        delete_scheduled_task,
     ]
 )
