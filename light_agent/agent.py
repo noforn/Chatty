@@ -378,7 +378,7 @@ async def get_light_state() -> list[dict]:
 # // google calendar
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
-CALENDAR_ID = "9d35c9b8384290b90f2717fada2e3af214f4fceccca38e4816ebc0f93d06aee4@group.calendar.google.com"
+CALENDAR_ID = "<id>@group.calendar.google.com"
 TOKEN_FILE = "token.json"
 CREDENTIALS_FILE = "credentials.json"
 
@@ -655,9 +655,7 @@ async def delete_calendar_event(event_id: str) -> dict:
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     print("Warning: GEMINI_API_KEY environment variable not set. Using placeholder. Please set it for the script to work.")
-    GEMINI_API_KEY = "AIzaSyChF7GNb7EtcbXL7aqhNP7j_OXuezatgsQ"
-    # AIzaSyDZhDMOePVnQffjsHIg8Vpb-aC-3QdvyVo
-    # AIzaSyChF7GNb7EtcbXL7aqhNP7j_OXuezatgsQ
+    GEMINI_API_KEY = "<api-key>"
 client = genai.Client(api_key=GEMINI_API_KEY)
 model = "gemini-2.0-flash-live-001" 
 turn_on_light_declaration_simple = {"name": "turn_on_light"} 
